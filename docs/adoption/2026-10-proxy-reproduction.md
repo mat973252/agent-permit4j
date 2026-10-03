@@ -2,6 +2,8 @@
 
 来源：[Spring AI #3485](https://github.com/spring-projects/spring-ai/issues/3485)，2025-06-09 报告代理工具发现失败；2026-10-03 GitHub API 仍为 open。它是公开场景线索，不是 AgentPermit4j 用户反馈，也不证明所有 Spring AI 版本都有同一缺陷。
 
+后续评论复核（2026-10-03）：[原作者后来表示第一部分已能正常工作](https://github.com/spring-projects/spring-ai/issues/3485#issuecomment-2965837031)，原因未定；另有[回复解释toolNames的函数/方法工具区别](https://github.com/spring-projects/spring-ai/issues/3485#issuecomment-2965907199)。因此开放状态不能证明原代理问题仍可复现。本项目修复的直接依据是下述公共0.5.0消费者复现，不能把它宣传为修复一个仍确认存在的上游缺陷。
+
 原issue示例的`runSQL`没有声明public，而本项目仍只接受公开工具方法。下面的本地复现覆盖公开方法在真实CGLIB代理上的注解发现与advice保留，不等同于复现或修好该用户的整个原应用；也不覆盖其toolNames注册问题。
 
 维护者用公共 Maven Central 0.5.0、Spring AI 2.0.1 和 Spring `ProxyFactory` 复现：普通对象可注册，CGLIB class proxy 注册时报 `at least one public annotated tool is required`。未先安装本地 SDK；复现缓存与后续候选缓存分开保存。
