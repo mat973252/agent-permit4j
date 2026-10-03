@@ -12,15 +12,23 @@ The example depends on AgentPermit4j `0.5.0`, available from Maven Central.
 From this checkout, run the standalone consumer without installing the SDK:
 
 ```powershell
-.\mvnw.cmd -B -ntp -f examples/spring-ai-adoption/pom.xml verify
+$publicCache = Join-Path ([IO.Path]::GetTempPath()) ('agentpermit-public-' + [guid]::NewGuid().ToString('N'))
+.\mvnw.cmd -B -ntp "-Dmaven.repo.local=$publicCache" -f examples/spring-ai-adoption/pom.xml verify
 ```
 
-On Linux/macOS, use `./mvnw` with the same arguments. The example also works with
-an installed Maven when copied outside this repository: `mvn -B -ntp verify`.
-To test local SDK changes instead, first run
-`.\mvnw.cmd -B -ntp -DskipTests -pl '!agent-permit-playground' install`.
-That replaces the published version in your local Maven repository with the
-source candidate; use a fresh repository to verify public artifact consumption.
+On Linux/macOS with a POSIX shell:
+
+```sh
+public_cache=$(mktemp -d)
+./mvnw -B -ntp "-Dmaven.repo.local=$public_cache" -f examples/spring-ai-adoption/pom.xml verify
+```
+
+When copying the example outside this repository, an installed Maven can run
+`mvn -B -ntp "-Dmaven.repo.local=$public_cache" verify` with that separate cache.
+Never install candidate SDK artifacts into this public-consumption cache.
+To test local SDK changes, use the isolated candidate script below. The candidate
+currently keeps the `0.5.0` coordinates, so a default-cache install could silently
+replace the published SDK in later consumer runs.
 
 The tests and terminal demonstration print:
 
@@ -83,8 +91,11 @@ remaining units. The observer delegates coordination to the published SDK; it
 does not implement its own cache or claim cross-process coordination.
 
 Compile with `maven.compiler.parameters=true`. This example intentionally uses
-flat scalar arguments. Nested DTOs, arrays, and proxy/interface annotation discovery
-are not silently adapted. Record unsupported original signatures in the
+flat scalar arguments. Nested DTOs, arrays, and interface-only annotation discovery
+are not silently adapted. Public `0.5.0` also lacks the later CGLIB discovery fix.
+The [unpublished source candidate](../../docs/adoption/2026-10-proxy-reproduction.md)
+supports CGLIB class proxies while preserving advice; it rejects final tool methods
+on those proxies, but permits them on plain objects. Record unsupported original signatures in the
 [independent adoption worksheet](../../docs/adoption/2026-09-first-integration.md).
 
 The local inventory lock proves this application's atomic write condition. It does

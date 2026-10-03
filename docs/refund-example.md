@@ -1,6 +1,8 @@
 # Three guarded business tools: order refunds
 
-This source-checkout example targets the prepared v0.5.0 release. It uses synthetic identities,
+This source-checkout example uses the v0.5.0 SDK coordinates. Maven Central has the
+published release; this checkout may also contain unpublished fixes, including the
+[CGLIB candidate](adoption/2026-10-proxy-reproduction.md). It uses synthetic identities,
 an embedded H2 business ledger, JDBC approval and audit adapters, and an in-process
 payment simulator. No LLM, credentials, network, or real payments are required.
 

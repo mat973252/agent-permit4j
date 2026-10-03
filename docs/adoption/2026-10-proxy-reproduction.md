@@ -21,6 +21,15 @@ if ($LASTEXITCODE -ne 0) { throw 'Proxy acceptance failed' }
 .\scripts\verify-adoption.ps1 -MavenRepository $candidateCache
 ```
 
+上述脚本验收的是随附库存示例。接入自己的独立工程时，保留同一个候选缓存，并从候选源码根目录调用 wrapper；将下面路径替换为你的实际 POM 绝对路径：
+
+```powershell
+.\mvnw.cmd -B -ntp "-Dmaven.repo.local=$candidateCache" -f 'D:/your-project/pom.xml' verify
+if ($LASTEXITCODE -ne 0) { throw 'Application integration failed' }
+```
+
+自己的工程通过 Maven 坐标引用候选，不复制 SDK 源码到业务工程。每次构建都显式传入此缓存；遗漏参数会回到默认缓存，不能据此认定测试了候选。若要比较公开 0.5.0，另建全新 `$publicCache`，仅执行消费者 `verify`，不在其中安装候选；具体命令见[独立消费示例](../../examples/spring-ai-adoption/README.md)。
+
 Git检出可另执行`git rev-parse HEAD`；无`.git`的源码ZIP无需执行它，改用`Get-FileHash source.zip -Algorithm SHA256`核对维护者提供的“源码提交↔ZIP SHA256”映射。ZIP哈希本身不能证明提交身份，制品SHA256SUMS也不能代替源码身份；没有可信映射则记录来源未核验。进入展开后的项目根目录再运行上述命令。
 
 首段执行4项方法/代理验收，之后复用候选脚本构建41个POM/JAR/source/Javadoc文件、SHA256清单，并在独立消费者目录online/offline验证库存示例。需要Java21与首次下载第三方依赖的网络；脚本不向Central发布，不配置签名。不同源码副本应使用不同的新缓存。
