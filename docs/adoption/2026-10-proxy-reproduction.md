@@ -9,3 +9,19 @@
 回归验证：使用真实 InMemoryApprovalService 与 InvocationFingerprinter，为捕获的规范化调用申请审批。未审批时 advice 和业务执行均为0；批准后通过代理执行，规范化参数与可信身份仍正确；同 key 重试返回相同结果。同审批换 orderId 返回 APPROVAL_INVOCATION_MISMATCH，换 key 返回 APPROVAL_ALREADY_CONSUMED；整个序列 advice 与实际业务均只执行1次。CGLIB 上 final 工具方法在注册时明确拒绝，普通对象的 final 方法仍可注册。拒绝回归先失败后通过，完整 Maven verify 通过。本轮修复尚未发布，公共0.5.0仍保留原行为；不能让用户误以为重新下载0.5.0即可得到修复。
 
 另外两条公开线索暂不扩实现：[MCP ToolContext传输 #4773](https://github.com/spring-projects/spring-ai/issues/4773)属于跨传输上下文问题，传输到达不等于身份可信；[执行前审批 #6916](https://github.com/spring-projects/spring-ai/issues/6916)涉及框架批次/流式交互，现有单工具 guard 不能冒充整套 SSE 审批工作流。只修复本轮实际复现的一项接入障碍，独立开发者接入与重复使用仍未测量。
+
+## 从未发布候选复现
+
+修复基线为本地提交 `c113515bad05919aab18b1da496cfac86a42bad9`，尚未推送。先取得维护者提供的包含此提交的源码副本；不能假设公共仓库已包含它。在副本根目录用PowerShell执行：
+
+```powershell
+git rev-parse HEAD
+$candidateCache = Join-Path ([IO.Path]::GetTempPath()) ('agentpermit-candidate-' + [guid]::NewGuid().ToString('N'))
+.\mvnw.cmd -B -ntp "-Dmaven.repo.local=$candidateCache" -pl agent-permit-spring-ai -am '-Dtest=GuardedToolMethodsAcceptanceTest' '-Dsurefire.failIfNoSpecifiedTests=false' test
+if ($LASTEXITCODE -ne 0) { throw 'Proxy acceptance failed' }
+.\scripts\verify-adoption.ps1 -MavenRepository $candidateCache
+```
+
+首段执行4项方法/代理验收，之后复用候选脚本构建41个POM/JAR/source/Javadoc文件、SHA256清单，并在独立消费者目录online/offline验证库存示例。需要Java21与首次下载第三方依赖的网络；脚本不向Central发布，不配置签名。不同源码副本应使用不同的新缓存。
+
+坐标仍是0.5.0，仅代表本地候选，不能混入默认`.m2`或公共制品复现缓存，也不能把这些JAR当作Central下载物。源码SHA、SHA256SUMS和消费者输出应共同留存。只有独立开发者实际完成接入才填写采用记录；维护者执行上述命令仍是工程验收。正式版本命名、真实Redis验收、签名和公共消费步骤继续遵循[发布说明](../releasing.md)，不由本说明自动触发。
