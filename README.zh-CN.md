@@ -117,7 +117,7 @@ var callbacks = GuardedToolMethods.fromAnnotated(dependencies, orderTools);
 // 只将这些受保护的 callbacks 注册给 Spring AI 客户端。
 ```
 
-工厂在执行管线**内部**调用业务方法。工具类需使用 `-parameters` 编译；当前参数映射支持扁平标量。注册对象由应用显式指定，不扫描 classpath，也不提供代理或接口注解发现。
+工厂在执行管线**内部**调用业务方法。工具类需使用 `-parameters` 编译；当前参数映射支持扁平标量。注册对象由应用显式指定，不扫描 classpath。已发布的 `0.5.0` 不提供代理或仅接口注解发现。[未发布源码候选](docs/adoption/2026-10-proxy-reproduction.md)支持 CGLIB 类代理并保留 advice，拒绝这类代理上的 final 工具方法，仍不支持仅接口注解发现。
 
 从可运行的[三个业务工具示例](docs/refund-example.md)及 [RefundTools 实现](agent-permit-playground/src/main/java/io/github/agentpermit4j/playground/refund/RefundTools.java)开始接入。[配置参考](docs/integration-reference.zh-CN.md)包含注解限制、自定义拒绝码、底层 callback API、Spring Boot 装配和可选的 Spring Security 桥接。仅添加 starter 不会自动提供策略或保护已有工具。
 

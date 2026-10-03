@@ -23,8 +23,10 @@ public_cache=$(mktemp -d)
 ./mvnw -B -ntp "-Dmaven.repo.local=$public_cache" -f examples/spring-ai-adoption/pom.xml verify
 ```
 
-When copying the example outside this repository, an installed Maven can run
-`mvn -B -ntp "-Dmaven.repo.local=$public_cache" verify` with that separate cache.
+When copying the example outside this repository, initialize a separate cache as
+above, then run installed Maven from the copied example directory. In PowerShell,
+use `mvn -B -ntp "-Dmaven.repo.local=$publicCache" verify`; in a POSIX shell,
+use `mvn -B -ntp "-Dmaven.repo.local=$public_cache" verify`.
 Never install candidate SDK artifacts into this public-consumption cache.
 To test local SDK changes, use the isolated candidate script below. The candidate
 currently keeps the `0.5.0` coordinates, so a default-cache install could silently

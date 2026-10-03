@@ -117,7 +117,7 @@ var callbacks = GuardedToolMethods.fromAnnotated(dependencies, orderTools);
 // Register only these guarded callbacks with your Spring AI client.
 ```
 
-The factory invokes each method **inside** the execution pipeline. Compile tool classes with `-parameters`; the current mapper accepts flat scalar arguments. Registration is explicit, with no classpath scanning or proxy/interface annotation discovery.
+The factory invokes each method **inside** the execution pipeline. Compile tool classes with `-parameters`; the current mapper accepts flat scalar arguments. Registration is explicit, with no classpath scanning. Published `0.5.0` does not discover proxy or interface-only annotations. The [unpublished source candidate](docs/adoption/2026-10-proxy-reproduction.md) supports CGLIB class proxies while preserving advice, rejects final tool methods on those proxies, and still excludes interface-only annotation discovery.
 
 Start with the working [three-tool example](docs/refund-example.md) and its [RefundTools implementation](agent-permit-playground/src/main/java/io/github/agentpermit4j/playground/refund/RefundTools.java). The [configuration reference](docs/integration-reference.md) covers annotation limits, custom denial codes, the lower-level callback API, Spring Boot wiring, and the optional Spring Security bridge. Adding the starter alone does not supply policies or automatically protect existing tools.
 
