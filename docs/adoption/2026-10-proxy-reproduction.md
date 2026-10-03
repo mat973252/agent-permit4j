@@ -15,12 +15,13 @@
 修复基线为本地提交 `c113515bad05919aab18b1da496cfac86a42bad9`，尚未推送。先取得维护者提供的包含此提交的源码副本；不能假设公共仓库已包含它。在副本根目录用PowerShell执行：
 
 ```powershell
-git rev-parse HEAD
 $candidateCache = Join-Path ([IO.Path]::GetTempPath()) ('agentpermit-candidate-' + [guid]::NewGuid().ToString('N'))
 .\mvnw.cmd -B -ntp "-Dmaven.repo.local=$candidateCache" -pl agent-permit-spring-ai -am '-Dtest=GuardedToolMethodsAcceptanceTest' '-Dsurefire.failIfNoSpecifiedTests=false' test
 if ($LASTEXITCODE -ne 0) { throw 'Proxy acceptance failed' }
 .\scripts\verify-adoption.ps1 -MavenRepository $candidateCache
 ```
+
+Git检出可另执行`git rev-parse HEAD`；无`.git`的源码ZIP无需执行它，改用`Get-FileHash source.zip -Algorithm SHA256`核对维护者提供的“源码提交↔ZIP SHA256”映射。ZIP哈希本身不能证明提交身份，制品SHA256SUMS也不能代替源码身份；没有可信映射则记录来源未核验。进入展开后的项目根目录再运行上述命令。
 
 首段执行4项方法/代理验收，之后复用候选脚本构建41个POM/JAR/source/Javadoc文件、SHA256清单，并在独立消费者目录online/offline验证库存示例。需要Java21与首次下载第三方依赖的网络；脚本不向Central发布，不配置签名。不同源码副本应使用不同的新缓存。
 
