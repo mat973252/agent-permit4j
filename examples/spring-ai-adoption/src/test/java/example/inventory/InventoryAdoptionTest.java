@@ -12,7 +12,6 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -24,7 +23,7 @@ class InventoryAdoptionTest {
   private static final JsonHelper JSON = new JsonHelper();
   private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-09-11T00:00:00Z"), ZoneOffset.UTC);
   private static final Principal REVIEWER = new Principal("reviewer-a", Map.of("role", "reviewer", "tenant", "tenant-a"));
-  private final InventoryApplication app = new InventoryApplication(CLOCK);
+  private InventoryApplication app = new InventoryApplication(CLOCK);
 
   @Test
   void threeMethodsReadPreviewAndExecuteOnlyTheReviewedChange() {
@@ -44,20 +43,30 @@ class InventoryAdoptionTest {
 
   @Test
   void concurrentRetriesReturnTheSameOutputAndReserveStockOnce() throws Exception {
+    var guard = new BlockingIdempotencyGuard();
+    app = new InventoryApplication(CLOCK, guard);
     var preview = approvedPreview();
-    var start = new CountDownLatch(1);
     try (var pool = Executors.newFixedThreadPool(8)) {
       var futures = new ArrayList<Future<String>>();
-      for (int index = 0; index < 8; index++) {
-        futures.add(pool.submit(() -> { start.await(); return reserve(preview, "concurrent", preview.reviewId()); }));
+      try {
+        futures.add(pool.submit(() -> reserve(preview, "concurrent", preview.reviewId())));
+        assertTrue(guard.ownerEntered.await(10, TimeUnit.SECONDS));
+        for (int index = 0; index < 7; index++) {
+          futures.add(pool.submit(() -> reserve(preview, "concurrent", preview.reviewId())));
+        }
+        assertTrue(guard.arrivals.await(10, TimeUnit.SECONDS), "all retries must enter the guard while its owner is blocked");
+        assertEquals(1, guard.executions.get());
+        for (var future : futures) assertFalse(future.isDone());
+      } finally {
+        guard.release.countDown();
       }
-      start.countDown();
       var first = futures.getFirst().get(10, TimeUnit.SECONDS);
       assertEquals("EXECUTED", envelope(first).get("outcome"));
       for (var future : futures) {
         assertEquals(first, future.get(10, TimeUnit.SECONDS));
       }
       assertEquals(first, reserve(preview, "concurrent", preview.reviewId()));
+      assertEquals(1, guard.executions.get());
     }
     assertEquals(1, app.inventory().writes());
     assertEquals(8, app.inventory().available());
@@ -71,6 +80,27 @@ class InventoryAdoptionTest {
     var result = call("inventory.reserve", JSON.toJson(changed), "changed", preview.reviewId());
     assertEquals("APPROVAL_INVOCATION_MISMATCH", envelope(result).get("reasonCode"));
     assertEquals(0, app.inventory().writes());
+  }
+
+  @Test
+  void successfulRetryCacheDoesNotBypassChangedQuantityOrTrustedIdentity() {
+    var preview = approvedPreview();
+    assertEquals("EXECUTED", envelope(reserve(preview, "cached", preview.reviewId())).get("outcome"));
+    var changed = new HashMap<>(preview.arguments());
+    changed.put("quantity", "3");
+    var changedResponse = envelope(call("inventory.reserve", JSON.toJson(changed), "cached", preview.reviewId()));
+    assertEquals("APPROVAL_REQUIRED", changedResponse.get("outcome"));
+    assertEquals("APPROVAL_INVOCATION_MISMATCH", changedResponse.get("reasonCode"));
+    var callback = app.tools().stream().filter(t -> t.getToolDefinition().name().equals("inventory.reserve")).findFirst().orElseThrow();
+    for (var identity : new String[][] {{"operator-a", "tenant-b"}, {"attacker", "tenant-a"}}) {
+      var trusted = InventoryApplication.context(identity[0], identity[1], "cached", preview.reviewId());
+      var response = envelope(callback.call(JSON.toJson(preview.arguments()), trusted));
+      assertEquals("DENIED", response.get("outcome"));
+      assertEquals("INVENTORY_ACCESS_DENIED", response.get("reasonCode"));
+    }
+    assertEquals(1, app.inventory().writes());
+    assertEquals(8, app.inventory().available());
+    assertEquals("EXECUTED", envelope(reserve(preview, "cached", preview.reviewId())).get("outcome"));
   }
 
   @Test

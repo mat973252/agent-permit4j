@@ -6,19 +6,21 @@ The three methods query inventory, prepare a review, and reserve the reviewed qu
 All business state, identity, approvals, and inventory changes are local synthetic data.
 There is no LLM, web server, external database, or payment account.
 
-## Run from this source checkout
+## Run with the published SDK
 
-Install the SDK, then build this example in a separate Maven invocation:
+The example depends on AgentPermit4j `0.5.0`, available from Maven Central.
+From this checkout, run the standalone consumer without installing the SDK:
 
 ```powershell
-.\mvnw.cmd -B -ntp -DskipTests -pl '!agent-permit-playground' install
 .\mvnw.cmd -B -ntp -f examples/spring-ai-adoption/pom.xml verify
 ```
 
 On Linux/macOS, use `./mvnw` with the same arguments. The example also works with
 an installed Maven when copied outside this repository: `mvn -B -ntp verify`.
-Current dependency: `0.5.0` (prepared, not yet published), installed from source. It is not a promise
-that this version is available from Maven Central.
+To test local SDK changes instead, first run
+`.\mvnw.cmd -B -ntp -DskipTests -pl '!agent-permit-playground' install`.
+That replaces the published version in your local Maven repository with the
+source candidate; use a fresh repository to verify public artifact consumption.
 
 The tests and terminal demonstration print:
 
@@ -68,10 +70,17 @@ if your application normalizes inputs, prepare the review from the same normaliz
 ## What the example proves
 
 The [consumer acceptance tests](src/test/java/example/inventory/InventoryAdoptionTest.java)
-exercise all three methods, no-approval/no-write, eight concurrent retries,
+exercise all three methods, no-approval/no-write, eight overlapping same-key calls,
 quantity tampering, consumed-approval reuse with another key, cross-tenant access,
-model identity spoofing, missing context/nested input, reviewer authorization,
+model identity spoofing, successful-cache retries with changed quantity or trusted
+tenant/principal, missing context/nested input, reviewer authorization,
 stale resource versions, and read-only audit replay without input/output secrets.
+
+The concurrency test pauses the owner inside the real idempotency guard before
+its business callback runs, waits for seven retries to enter that guard boundary,
+then releases it. The test checks identical results, one business write and eight
+remaining units. The observer delegates coordination to the published SDK; it
+does not implement its own cache or claim cross-process coordination.
 
 Compile with `maven.compiler.parameters=true`. This example intentionally uses
 flat scalar arguments. Nested DTOs, arrays, and proxy/interface annotation discovery
@@ -84,7 +93,7 @@ For Redis/JDBC contracts and the separate UNKNOWN outcome recovery example, see
 the [integration reference](../../docs/integration-reference.md) and
 [refund walkthrough](../../docs/refund-example.md).
 
-## Verify artifact consumption in isolation
+## Verify source candidate consumption in isolation
 
 From the SDK checkout, run the maintained PowerShell script (PowerShell 7 via
 `pwsh` on Linux/macOS, or PowerShell on Windows):

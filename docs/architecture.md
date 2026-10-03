@@ -195,9 +195,14 @@ The adapter performs no component scanning, property binding, bean discovery, id
 `GuardedToolMethods.fromAnnotated` builds an immutable, name-ordered list from
 explicit application objects. All public methods it discovers with `@Tool` must
 also have `@AgentPermit`. Missing parameter names, duplicate tool names, and an
-empty registration are rejected. The factory does not perform bean or classpath
-scanning, interface/proxy annotation discovery, or automatic replacement of
-existing callbacks.
+empty registration are rejected. For a Spring CGLIB class proxy, discovery reads
+the user class's public method annotations and parameter metadata; invocation
+still targets the supplied proxy, preserving its advice inside the guarded
+executor. Final annotated methods on class proxies are rejected because CGLIB
+cannot advise them; final methods on ordinary objects remain supported.
+It never unwraps the target object to bypass advice. The factory does
+not perform bean or classpath scanning, interface annotation discovery, JDK
+interface-proxy adaptation, or automatic replacement of existing callbacks.
 
 Its shared dependencies omit the executor: each method supplies its own executor
 inside `ResultDecisionPipeline`. Spring AI's `MethodToolCallback` is invoked only

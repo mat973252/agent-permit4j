@@ -9,6 +9,7 @@ import io.github.agentpermit4j.core.RiskAssessment;
 import io.github.agentpermit4j.core.RiskLevel;
 import io.github.agentpermit4j.core.ToolInvocation;
 import io.github.agentpermit4j.execution.InMemoryResultIdempotencyGuard;
+import io.github.agentpermit4j.execution.ResultIdempotencyGuard;
 import io.github.agentpermit4j.springai.GuardedToolCallback;
 import io.github.agentpermit4j.springai.GuardedToolMethods;
 import io.github.agentpermit4j.springai.SpringAiToolContextKeys;
@@ -27,13 +28,17 @@ public final class InventoryApplication {
   private final List<GuardedToolCallback> tools;
 
   public InventoryApplication(Clock clock) {
+    this(clock, new InMemoryResultIdempotencyGuard());
+  }
+
+  InventoryApplication(Clock clock, ResultIdempotencyGuard idempotency) {
     var approvals = new InMemoryApprovalService(clock, () -> UUID.randomUUID().toString(),
         new InvocationFingerprinter(), InventoryApplication::authorizeReviewer);
     reviews = new InventoryReviews(inventory, approvals);
     var dependencies = new GuardedToolMethods.Dependencies(
         InventoryApplication::validate, invocation -> invocation,
         InventoryApplication::authorize, InventoryApplication::assessRisk,
-        approvals, new InMemoryResultIdempotencyGuard(), audit, supplied -> supplied);
+        approvals, idempotency, audit, supplied -> supplied);
     tools = GuardedToolMethods.fromAnnotated(dependencies, new InventoryTools(inventory, reviews));
   }
 
