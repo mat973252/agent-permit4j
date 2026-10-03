@@ -37,7 +37,7 @@ public final class GuardedToolMethods {
       var methods = ClassUtils.getUserClass(Objects.requireNonNull(target, "target")).getMethods();
       Arrays.sort(methods, Comparator.comparing(Method::toGenericString));
       for (var method : methods) {
-        if (method.isAnnotationPresent(Tool.class)) {
+        if (!method.isBridge() && method.isAnnotationPresent(Tool.class)) {
           var callback = create(dependencies, target, method);
           if (callbacks.putIfAbsent(callback.getToolDefinition().name(), callback) != null) {
             throw new IllegalArgumentException("duplicate tool name");

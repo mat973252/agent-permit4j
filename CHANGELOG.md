@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Skip compiler-generated bridge methods when registering annotated business tools,
+  so a concrete generic override is registered once on ordinary objects and CGLIB
+  class proxies. Approval, idempotency and invocation through proxy advice remain enforced.
+
 ## 0.5.0 — 2026-09-22
 
 ### Breaking Java namespace migration

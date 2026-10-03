@@ -32,6 +32,35 @@ import org.springframework.ai.tool.annotation.Tool;
 class GuardedToolMethodsAcceptanceTest {
 
   @Test
+  void registersGenericOverrideOnceAndKeepsApprovalAndProxyAdvice() {
+    assertTrue(java.util.Arrays.stream(GenericOrders.class.getMethods())
+        .anyMatch(method -> method.isBridge() && method.isAnnotationPresent(Tool.class)));
+    for (boolean proxied : new boolean[] {false, true}) {
+      var target = new GenericOrders();
+      var advisedCalls = new AtomicInteger();
+      var factory = new ProxyFactory(target);
+      factory.setProxyTargetClass(true);
+      factory.addAdvice((MethodInterceptor) invocation -> {
+        if (invocation.getMethod().getName().equals("lookup")) advisedCalls.incrementAndGet();
+        return invocation.proceed();
+      });
+      var callbacks = GuardedToolMethods.fromAnnotated(
+          dependencies(), proxied ? factory.getProxy() : target);
+      assertEquals(1, callbacks.size());
+      var callback = callbacks.getFirst();
+      var input = "{\"orderId\":\"order-1\"}";
+      assertTrue(callback.call(input, context(null)).contains("APPROVAL_REQUIRED"));
+      assertEquals(0, target.calls.get());
+      var first = callback.call(input, context("approval-1"));
+      assertTrue(first.contains("EXECUTED"));
+      assertTrue(first.contains("order-1"));
+      assertEquals(first, callback.call(input, context("approval-1")));
+      assertEquals(1, target.calls.get());
+      assertEquals(proxied ? 1 : 0, advisedCalls.get());
+    }
+  }
+
+  @Test
   void discoversClassProxyAnnotationsWithoutBypassingAdviceApprovalOrIdempotency() {
     var target = new OrderMethods();
     var advisedCalls = new AtomicInteger();
@@ -179,6 +208,22 @@ class GuardedToolMethodsAcceptanceTest {
     @Tool(description = "Final method cannot be advised on a class proxy")
     @AgentPermit(resourceType = "order", resourceArg = "orderId", risk = RiskLevel.LOW)
     public final String lookup(String orderId) {
+      calls.incrementAndGet();
+      return orderId;
+    }
+  }
+
+  public abstract static class GenericBase<T> {
+    public abstract T lookup(T orderId);
+  }
+
+  public static class GenericOrders extends GenericBase<String> {
+    final AtomicInteger calls = new AtomicInteger();
+
+    @Override
+    @Tool(name = "orders.lookup", description = "Look up an order through a generic override")
+    @AgentPermit(resourceType = "order", resourceArg = "orderId")
+    public String lookup(String orderId) {
       calls.incrementAndGet();
       return orderId;
     }
