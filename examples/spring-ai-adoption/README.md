@@ -95,7 +95,7 @@ does not implement its own cache or claim cross-process coordination.
 Compile with `maven.compiler.parameters=true`. This example intentionally uses
 flat scalar arguments. Nested DTOs, arrays, and interface-only annotation discovery
 are not silently adapted. Public `0.5.0` also lacks the later CGLIB discovery fix.
-The [unpublished source candidate](../../docs/adoption/2026-10-proxy-reproduction.md)
+The [public source candidate, not released to Maven Central](../../docs/adoption/2026-10-proxy-reproduction.md)
 supports CGLIB class proxies while preserving advice; it rejects final tool methods
 on those proxies, but permits them on plain objects. Record unsupported original signatures in the
 [independent adoption worksheet](../../docs/adoption/2026-09-first-integration.md).
@@ -108,7 +108,7 @@ the [integration reference](../../docs/integration-reference.md) and
 
 ## Verify source candidate consumption in isolation
 
-From the SDK checkout, run the maintained PowerShell script (PowerShell 7 via
+To obtain the public candidate checkout, follow the [clone instructions](../../docs/adoption/2026-10-proxy-reproduction.md). From that SDK checkout, run the maintained PowerShell script (PowerShell 7 via
 `pwsh` on Linux/macOS, or PowerShell on Windows):
 
 ```powershell

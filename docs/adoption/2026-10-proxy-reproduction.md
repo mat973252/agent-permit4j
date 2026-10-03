@@ -18,7 +18,16 @@
 
 ## 从未发布候选复现
 
-修复基线为本地提交 `c113515bad05919aab18b1da496cfac86a42bad9`，尚未推送。先取得维护者提供的包含此提交的源码副本；不能假设公共仓库已包含它。在副本根目录用PowerShell执行：
+最初修复基线为 `c113515bad05919aab18b1da496cfac86a42bad9`；包含后续bridge方法修复的候选已在[草稿 PR #2](https://github.com/mat973252/agent-permit4j/pull/2)公开，尚未发布到Maven Central。先从空目录获取源码（需Git），记录实际检出的完整提交；分支会随审阅更新：
+
+```powershell
+git clone --branch mat/p1-public-consumer --single-branch https://github.com/mat973252/agent-permit4j.git agent-permit4j-candidate
+if ($LASTEXITCODE -ne 0) { throw 'Clone failed' }
+Set-Location agent-permit4j-candidate
+git rev-parse HEAD
+```
+
+接着在候选根目录用Windows PowerShell执行：
 
 ```powershell
 $candidateCache = Join-Path ([IO.Path]::GetTempPath()) ('agentpermit-candidate-' + [guid]::NewGuid().ToString('N'))
@@ -38,6 +47,6 @@ if ($LASTEXITCODE -ne 0) { throw 'Application integration failed' }
 
 Git检出可另执行`git rev-parse HEAD`；无`.git`的源码ZIP无需执行它，改用`Get-FileHash source.zip -Algorithm SHA256`核对维护者提供的“源码提交↔ZIP SHA256”映射。ZIP哈希本身不能证明提交身份，制品SHA256SUMS也不能代替源码身份；没有可信映射则记录来源未核验。进入展开后的项目根目录再运行上述命令。
 
-首段执行4项方法/代理验收，之后复用候选脚本构建41个POM/JAR/source/Javadoc文件、SHA256清单，并在独立消费者目录online/offline验证库存示例。需要Java21与首次下载第三方依赖的网络；脚本不向Central发布，不配置签名。不同源码副本应使用不同的新缓存。
+首段执行方法/代理验收，之后复用候选脚本构建41个POM/JAR/source/Javadoc文件、SHA256清单，并在独立消费者目录online/offline验证库存示例。需要Java21与首次下载第三方依赖的网络；脚本不向Central发布，不配置签名。不同源码副本应使用不同的新缓存。
 
 坐标仍是0.5.0，仅代表本地候选，不能混入默认`.m2`或公共制品复现缓存，也不能把这些JAR当作Central下载物。源码SHA、SHA256SUMS和消费者输出应共同留存。只有独立开发者实际完成接入才填写采用记录；维护者执行上述命令仍是工程验收。正式版本命名、真实Redis验收、签名和公共消费步骤继续遵循[发布说明](../releasing.md)，不由本说明自动触发。
