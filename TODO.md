@@ -98,10 +98,11 @@ Iteration plan: [docs/iterations/v0.5.md](docs/iterations/v0.5.md).
   - Verify: a failing consumer example demonstrates the obstacle, and the smallest documentation, wiring, DTO, or proxy change resolves it while preserving security contracts.
 - [x] Prepare unsigned candidate artifacts and verify local artifact consumption.
   - Verify: the candidate profile produces 41 library files, the isolated consumer passes online and offline, and release/adoption instructions distinguish completed checks from pending publication.
-- [ ] Complete signed publication and public-repository consumption after maintainer validation (independent adoption deferred on 2026-09-22).
+- [x] Complete signed publication and public-repository consumption after maintainer validation (independent adoption deferred on 2026-09-22).
+  - Completed on 2026-09-22: Central published 0.5.0 and an empty-cache public consumer passed online and offline. See [release evidence](docs/iterations/v0.5-release.md). The 2026-10-03 maintenance consumer also verifies changed arguments, trusted identities and controlled same-key overlap; this is not independent adoption.
   - Verify: assign the release version, validate signing and Portal access, confirm the private reporting channel, publish, and resolve the released artifacts from an empty Maven repository without source install.
 - [x] Complete automated candidate regression evidence, including the opt-in real Redis suite.
-  - Verify: full Maven Wrapper verify, the standalone consumer, and five real Redis acceptance cases pass. Actual adopter results and publication remain separate unfinished gates above.
+  - Verify: full Maven Wrapper verify, the standalone consumer, and five real Redis acceptance cases pass. Actual adopter results remain unmeasured; publication is recorded separately above.
 
 ## Later — production hardening and ecosystem
 

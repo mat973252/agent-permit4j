@@ -6,19 +6,31 @@ The three methods query inventory, prepare a review, and reserve the reviewed qu
 All business state, identity, approvals, and inventory changes are local synthetic data.
 There is no LLM, web server, external database, or payment account.
 
-## Run from this source checkout
+## Run with the published SDK
 
-Install the SDK, then build this example in a separate Maven invocation:
+The example depends on AgentPermit4j `0.5.0`, available from Maven Central.
+From this checkout, run the standalone consumer without installing the SDK:
 
 ```powershell
-.\mvnw.cmd -B -ntp -DskipTests -pl '!agent-permit-playground' install
-.\mvnw.cmd -B -ntp -f examples/spring-ai-adoption/pom.xml verify
+$publicCache = Join-Path ([IO.Path]::GetTempPath()) ('agentpermit-public-' + [guid]::NewGuid().ToString('N'))
+.\mvnw.cmd -B -ntp "-Dmaven.repo.local=$publicCache" -f examples/spring-ai-adoption/pom.xml verify
 ```
 
-On Linux/macOS, use `./mvnw` with the same arguments. The example also works with
-an installed Maven when copied outside this repository: `mvn -B -ntp verify`.
-Current dependency: `0.5.0` (prepared, not yet published), installed from source. It is not a promise
-that this version is available from Maven Central.
+On Linux/macOS with a POSIX shell:
+
+```sh
+public_cache=$(mktemp -d)
+./mvnw -B -ntp "-Dmaven.repo.local=$public_cache" -f examples/spring-ai-adoption/pom.xml verify
+```
+
+When copying the example outside this repository, initialize a separate cache as
+above, then run installed Maven from the copied example directory. In PowerShell,
+use `mvn -B -ntp "-Dmaven.repo.local=$publicCache" verify`; in a POSIX shell,
+use `mvn -B -ntp "-Dmaven.repo.local=$public_cache" verify`.
+Never install candidate SDK artifacts into this public-consumption cache.
+To test local SDK changes, use the isolated candidate script below. The candidate
+currently keeps the `0.5.0` coordinates, so a default-cache install could silently
+replace the published SDK in later consumer runs.
 
 The tests and terminal demonstration print:
 
@@ -68,14 +80,24 @@ if your application normalizes inputs, prepare the review from the same normaliz
 ## What the example proves
 
 The [consumer acceptance tests](src/test/java/example/inventory/InventoryAdoptionTest.java)
-exercise all three methods, no-approval/no-write, eight concurrent retries,
+exercise all three methods, no-approval/no-write, eight overlapping same-key calls,
 quantity tampering, consumed-approval reuse with another key, cross-tenant access,
-model identity spoofing, missing context/nested input, reviewer authorization,
+model identity spoofing, successful-cache retries with changed quantity or trusted
+tenant/principal, missing context/nested input, reviewer authorization,
 stale resource versions, and read-only audit replay without input/output secrets.
 
+The concurrency test pauses the owner inside the real idempotency guard before
+its business callback runs, waits for seven retries to enter that guard boundary,
+then releases it. The test checks identical results, one business write and eight
+remaining units. The observer delegates coordination to the published SDK; it
+does not implement its own cache or claim cross-process coordination.
+
 Compile with `maven.compiler.parameters=true`. This example intentionally uses
-flat scalar arguments. Nested DTOs, arrays, and proxy/interface annotation discovery
-are not silently adapted. Record unsupported original signatures in the
+flat scalar arguments. Nested DTOs, arrays, and interface-only annotation discovery
+are not silently adapted. Public `0.5.0` also lacks the later CGLIB discovery fix.
+The [public source candidate, not released to Maven Central](../../docs/adoption/2026-10-proxy-reproduction.md)
+supports CGLIB class proxies while preserving advice; it rejects final tool methods
+on those proxies, but permits them on plain objects. Record unsupported original signatures in the
 [independent adoption worksheet](../../docs/adoption/2026-09-first-integration.md).
 
 The local inventory lock proves this application's atomic write condition. It does
@@ -84,9 +106,9 @@ For Redis/JDBC contracts and the separate UNKNOWN outcome recovery example, see
 the [integration reference](../../docs/integration-reference.md) and
 [refund walkthrough](../../docs/refund-example.md).
 
-## Verify artifact consumption in isolation
+## Verify source candidate consumption in isolation
 
-From the SDK checkout, run the maintained PowerShell script (PowerShell 7 via
+To obtain the public candidate checkout, follow the [clone instructions](../../docs/adoption/2026-10-proxy-reproduction.md). From that SDK checkout, run the maintained PowerShell script (PowerShell 7 via
 `pwsh` on Linux/macOS, or PowerShell on Windows):
 
 ```powershell

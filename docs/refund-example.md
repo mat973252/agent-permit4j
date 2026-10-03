@@ -1,6 +1,8 @@
 # Three guarded business tools: order refunds
 
-This source-checkout example targets the prepared v0.5.0 release. It uses synthetic identities,
+This source-checkout example uses the v0.5.0 SDK coordinates. Maven Central has the
+published release; this checkout may also contain unpublished fixes, including the
+[CGLIB candidate](adoption/2026-10-proxy-reproduction.md). It uses synthetic identities,
 an embedded H2 business ledger, JDBC approval and audit adapters, and an in-process
 payment simulator. No LLM, credentials, network, or real payments are required.
 
@@ -63,9 +65,13 @@ var callbacks = GuardedToolMethods.fromAnnotated(dependencies, orderTools, other
 The factory inspects public methods on those explicit objects. Every discovered
 `@Tool` must also declare `@AgentPermit`; duplicate tool names and an empty
 registration fail at construction. It does not scan the classpath, select Spring
-beans, or expose the original unguarded callbacks. Annotations must be present on
-the public methods returned by the supplied object's class; proxy/interface
-annotation discovery is not provided by this factory.
+beans, or expose the original unguarded callbacks. In the current source candidate,
+annotations are discovered on the public methods of the user class behind a
+CGLIB proxy, while invocation still goes through the supplied proxy. Annotated
+final methods on a class proxy are rejected because they cannot be advised;
+plain-object final methods remain supported. Interface-only annotation discovery
+is not provided. This proxy fix is not included in the published 0.5.0 artifacts;
+see the [candidate reproduction](adoption/2026-10-proxy-reproduction.md).
 
 Compile tool classes with `-parameters` (Maven: `maven.compiler.parameters=true`).
 The current mapper accepts only flat scalar arguments; nested objects and arrays

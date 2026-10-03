@@ -11,6 +11,7 @@ import io.github.agentpermit4j.execution.ResultToolExecutor;
 import io.github.agentpermit4j.policy.Authorizer;
 import io.github.agentpermit4j.policy.RiskEvaluator;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -22,6 +23,7 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.method.MethodToolCallback;
 import org.springframework.ai.tool.support.ToolDefinitions;
 import org.springframework.ai.util.JsonHelper;
+import org.springframework.util.ClassUtils;
 
 /** Explicitly registers annotated methods on application-supplied objects, without bean scanning. */
 public final class GuardedToolMethods {
@@ -32,10 +34,10 @@ public final class GuardedToolMethods {
     Objects.requireNonNull(dependencies, "dependencies");
     var callbacks = new TreeMap<String, GuardedToolCallback>();
     for (var target : Objects.requireNonNull(targets, "targets")) {
-      var methods = Objects.requireNonNull(target, "target").getClass().getMethods();
+      var methods = ClassUtils.getUserClass(Objects.requireNonNull(target, "target")).getMethods();
       Arrays.sort(methods, Comparator.comparing(Method::toGenericString));
       for (var method : methods) {
-        if (method.isAnnotationPresent(Tool.class)) {
+        if (!method.isBridge() && method.isAnnotationPresent(Tool.class)) {
           var callback = create(dependencies, target, method);
           if (callbacks.putIfAbsent(callback.getToolDefinition().name(), callback) != null) {
             throw new IllegalArgumentException("duplicate tool name");
@@ -50,6 +52,9 @@ public final class GuardedToolMethods {
   }
 
   private static GuardedToolCallback create(Dependencies dependencies, Object target, Method method) {
+    if (ClassUtils.getUserClass(target) != target.getClass() && Modifier.isFinal(method.getModifiers())) {
+      throw new IllegalArgumentException("class proxy tool methods must not be final");
+    }
     requireParameterNames(method);
     var definition = ToolDefinitions.from(method);
     var policy = AgentPermitMethodPolicy.from(definition, method);
